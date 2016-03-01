@@ -1,0 +1,106 @@
+#!/usr/bin/env python
+
+__author__ = 'Kirill Kovalev'
+__email__ = "kovalev.kirill.a@gmail.com"
+__license__ = "GPL"
+__status__ = "for home usage"
+
+import sys
+
+class BrightnessControl:
+    def __init__(self, br_max_path, br_actual_path, br_path):
+        self.br_max_path = br_max_path
+        self.br_actual_path = br_actual_path
+        self.br_path = br_path
+
+        self.br_max = self.get_br_max(br_max_path)
+        self.br_step = self.br_max / 10
+
+        self.br_actual = self.get_br_actual(br_actual_path)
+        self.br_original = self.br_actual
+
+    def get_br_max(self, br_max_path):
+        with open(self.br_max_path, 'r') as fp:
+            br_max = int(fp.read())
+            fp.close()
+
+        return br_max
+
+    def get_br_actual(self, br_actual_path):
+        with open(self.br_actual_path, 'r') as fp:
+            br_actual = int(fp.read())
+            fp.close()
+
+        return br_actual
+
+    def set_br_max(self):
+        self.br_actual = self.br_max
+        with open(self.br_path, 'w') as fp:
+            fp.write(str(self.br_actual))
+            fp.close()
+
+    def set_br_min(self):
+        self.br_actual = self.br_step
+        with open(self.br_path, 'w') as fp:
+            fp.write(str(self.br_actual))
+            fp.close()
+
+    def set_br_up(self):
+        self.br_actual += self.br_step
+        if self.br_actual > self.br_max:
+            self.br_actual = self.br_max
+            return self.set_br_max()
+
+        with open(self.br_path, 'w') as fp:
+            fp.write(str(self.br_actual))
+            fp.close()
+
+    def set_br_down(self):
+        self.br_actual -= self.br_step
+        if self.br_actual < self.br_step:
+            self.br_actual = self.br_step
+            return self.set_br_min()
+
+        with open(self.br_path, 'w') as fp:
+            fp.write(str(self.br_actual))
+            fp.close()
+
+    def set_br_absolute(self, value):
+        self.br_actual = int(value)
+
+        if self.br_actual < self.br_step:
+            self.br_actual = self.br_step
+            return self.set_br_min()
+
+        if self.br_actual > self.br_max:
+            self.br_actual = self.br_max
+            return self.set_br_max()
+
+        with open(self.br_path, 'w') as fp:
+            fp.write(str(self.br_actual))
+            fp.close()
+
+control = BrightnessControl(
+    '/sys/class/backlight/intel_backlight/max_brightness',
+    '/sys/class/backlight/intel_backlight/actual_brightness',
+    '/sys/class/backlight/intel_backlight/brightness'
+)
+
+arg = ''
+if len(sys.argv) > 1:
+    arg = sys.argv[1]
+
+if arg == 'get' or arg == '':
+    pass
+elif arg == 'up':
+    control.set_br_up()
+elif arg == 'down':
+    control.set_br_down()
+elif arg == 'max':
+    control.set_br_max()
+elif arg == 'min':
+    control.set_br_min()
+else:
+    control.set_br_absolute(arg)
+
+print("%s %s" % (str(control.br_actual), str(control.br_max)))
